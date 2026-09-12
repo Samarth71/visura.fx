@@ -1,0 +1,9 @@
+{
+  "name": "visuraa-time-capsules",
+  "version": "1.0.0",
+  "description": "Sentimental Time Capsules - deployed on Vercel",
+  "dependencies": {
+    "@upstash/redis": "^1.34.0",
+    "nodemailer": "^6.9.14"
+  }
+}
