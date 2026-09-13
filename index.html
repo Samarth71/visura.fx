@@ -391,6 +391,64 @@
     .capsule-card:hover { transform: none; }
     .archive-row:hover { padding-left: 0; }
   }
+
+  /* Confetti */
+  .confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; }
+  .confetti-piece {
+    position: absolute; top: -12px; width: 7px; height: 12px; opacity: 0.9;
+    animation-name: confettiFall; animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); animation-fill-mode: forwards;
+  }
+  @keyframes confettiFall {
+    to { transform: translateY(100vh) translateX(var(--drift)) rotate(var(--rot)); opacity: 0; }
+  }
+
+  /* Recipient reveal screen */
+  .reveal-screen {
+    position: fixed; inset: 0; background: var(--obsidian); z-index: 200;
+    display: none; align-items: center; justify-content: center; flex-direction: column;
+    padding: 24px; text-align: center;
+  }
+  .reveal-inner { max-width: 520px; }
+  .reveal-seal { width: 140px; height: 140px; margin: 0 auto 30px; cursor: pointer; }
+  .reveal-seal svg { width: 100%; height: 100%; transition: transform 0.5s var(--ease-lux); display: block; }
+  .reveal-seal:hover svg { transform: scale(1.05); }
+  .reveal-seal.breaking svg { animation: sealBreak 0.7s var(--ease-lux) forwards; }
+  @keyframes sealBreak {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    55%  { transform: scale(1.3) rotate(10deg); opacity: 1; }
+    100% { transform: scale(1.7) rotate(-8deg); opacity: 0; }
+  }
+  .reveal-hint { font-size: 13px; color: var(--ink-muted); letter-spacing: 0.04em; }
+  .reveal-pin-entry { display: none; flex-direction: column; align-items: center; gap: 14px; margin-top: 20px; }
+  .reveal-pin-input {
+    background: transparent; border: none; border-bottom: 1px solid var(--hairline-strong); color: var(--ivory);
+    font-family: 'Inter', sans-serif; font-size: 20px; letter-spacing: 0.35em; text-align: center; width: 140px;
+    padding: 8px 0;
+  }
+  .reveal-pin-input:focus { outline: none; border-bottom-color: var(--ivory); }
+  .reveal-pin-error { font-size: 12px; color: var(--danger); min-height: 14px; margin: 0; }
+  .reveal-content { opacity: 0; animation: heroRise 0.9s var(--ease-lux) forwards; }
+  .reveal-meta {
+    font-size: 11px; color: var(--spine-lit); letter-spacing: 0.12em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .reveal-badge {
+    display: inline-block; font-size: 10px; letter-spacing: 0.06em; color: var(--sealed);
+    border: 1px solid var(--sealed); padding: 5px 12px; margin-bottom: 26px; text-transform: uppercase;
+  }
+  .reveal-message {
+    font-family: 'Cormorant Garamond', serif; font-size: 24px; line-height: 1.75; color: var(--ivory);
+    white-space: pre-wrap; min-height: 60px;
+  }
+  .reveal-fun-note {
+    margin-top: 30px; font-size: 13px; color: var(--ivory-dim); font-style: italic;
+    opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.3s;
+  }
+  .reveal-back-link {
+    display: inline-block; margin-top: 40px; font-size: 12px; color: var(--ink-muted);
+    text-decoration: underline; cursor: pointer;
+  }
+  .reveal-back-link:hover { color: var(--ivory); }
 </style>
 </head>
 <body>
@@ -458,9 +516,9 @@
           <input type="text" id="recipientName" placeholder="Their name">
         </div>
         <div class="capsule-field" id="field-recipientEmail">
-          <label for="recipientEmail">Recipient email</label>
+          <label for="recipientEmail">Recipient email <span style="color: var(--ink-muted); font-weight: 300;">(or WhatsApp below)</span></label>
           <input type="email" id="recipientEmail" placeholder="name@email.com">
-          <p class="field-error">Enter a valid email address.</p>
+          <p class="field-error">Enter a valid email, or add a WhatsApp number below.</p>
         </div>
       </div>
 
@@ -503,10 +561,16 @@
           <input type="text" id="occasion" placeholder="18th birthday">
         </div>
         <div class="capsule-field" id="field-recipientPhone">
-          <label for="recipientPhone">WhatsApp number <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+          <label for="recipientPhone">WhatsApp number <span style="color: var(--ink-muted); font-weight: 300;">(or email above)</span></label>
           <input type="tel" id="recipientPhone" placeholder="+91XXXXXXXXXX">
-          <p class="field-error">Include the country code, e.g. +91XXXXXXXXXX.</p>
+          <p class="field-error">Include the country code, e.g. +91XXXXXXXXXX — or add an email above.</p>
         </div>
+      </div>
+
+      <div class="capsule-field" id="field-recipientPin">
+        <label for="recipientPin">Lock with a PIN <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+        <input type="text" id="recipientPin" maxlength="4" inputmode="numeric" placeholder="4-digit PIN, e.g. 1234" style="max-width: 200px;">
+        <p class="field-error">PIN must be exactly 4 digits.</p>
       </div>
 
       <div class="capsule-field" id="field-message" style="margin-bottom: 0;">
@@ -568,6 +632,31 @@
       <button type="button" class="confirm-cancel" id="confirmCancelBtn">Cancel</button>
       <button type="button" class="confirm-delete" id="confirmDeleteBtn">Delete</button>
     </div>
+  </div>
+</div>
+
+<div class="reveal-screen" id="revealScreen">
+  <div class="reveal-inner">
+    <div class="reveal-seal" id="revealSeal">
+      <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="18.5" stroke="#8a7e63" stroke-width="1"/>
+        <circle cx="20" cy="20" r="12.5" stroke="#8a7e63" stroke-width="1"/>
+        <path d="M20 12L22.5 17.5L28.5 18.3L24.2 22.4L25.3 28.3L20 25.4L14.7 28.3L15.8 22.4L11.5 18.3L17.5 17.5L20 12Z" stroke="#b7b1a5" stroke-width="0.75"/>
+      </svg>
+    </div>
+    <p class="reveal-hint" id="revealHint">Tap the seal to open it.</p>
+    <div class="reveal-pin-entry" id="revealPinEntry">
+      <input type="text" id="revealPinInput" maxlength="4" inputmode="numeric" placeholder="4-digit PIN" class="reveal-pin-input">
+      <button type="button" class="capsule-cta" id="revealPinSubmit">Unlock</button>
+      <p class="reveal-pin-error" id="revealPinError"></p>
+    </div>
+    <div class="reveal-content" id="revealContent" style="display:none;">
+      <p class="reveal-meta" id="revealMeta"></p>
+      <span class="reveal-badge" id="revealBadge">Verified &amp; safe</span>
+      <p class="reveal-message" id="revealMessage"></p>
+      <p class="reveal-fun-note" id="revealFunNote"></p>
+    </div>
+    <a class="reveal-back-link" id="revealBackLink" href="/">Back to visuraa</a>
   </div>
 </div>
 
@@ -973,6 +1062,7 @@
     document.getElementById('recipientName').value = c.recipientName || '';
     document.getElementById('recipientEmail').value = c.recipientEmail || '';
     document.getElementById('recipientPhone').value = c.recipientPhone || '';
+    document.getElementById('recipientPin').value = c.recipientPin || '';
     document.getElementById('occasion').value = c.occasion || '';
     document.getElementById('message').value = c.message || '';
 
@@ -1039,7 +1129,65 @@
 
   /* ---------- Seal moment (stamp + typewriter) ---------- */
 
+  /* ---------- Confetti + sound effects ---------- */
+
+  function fireConfetti() {
+    const colors = ['#8a7e63', '#d8cdb0', '#f2ede4', '#5c6a5e'];
+    const container = document.createElement('div');
+    container.className = 'confetti-container';
+    document.body.appendChild(container);
+    for (let i = 0; i < 60; i++) {
+      const piece = document.createElement('span');
+      piece.className = 'confetti-piece';
+      piece.style.left = Math.random() * 100 + 'vw';
+      piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+      piece.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+      piece.style.animationDelay = (Math.random() * 0.3) + 's';
+      piece.style.setProperty('--drift', (Math.random() * 160 - 80) + 'px');
+      piece.style.setProperty('--rot', (Math.random() * 720 - 360) + 'deg');
+      container.appendChild(piece);
+    }
+    setTimeout(() => container.remove(), 4000);
+  }
+
+  function playStampSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.5, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+
+      const bufferSize = Math.floor(ctx.sampleRate * 0.08);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.3, now);
+      noise.connect(noiseGain).connect(ctx.destination);
+      noise.start(now);
+    } catch (err) {
+      /* audio is a nice-to-have; ignore failures silently */
+    }
+  }
+
   function showSealMoment(opts) {
+    playStampSound();
+    fireConfetti();
     const dateObj = new Date(opts.deliveryDateTime);
     const dateLabel = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
     const timeLabel = formatTimeDisplay(pad(dateObj.getHours()) + ':' + pad(dateObj.getMinutes()));
@@ -1105,13 +1253,24 @@
     const recipientName = document.getElementById('recipientName').value.trim();
     const recipientEmail = document.getElementById('recipientEmail').value.trim();
     const recipientPhone = document.getElementById('recipientPhone').value.trim();
+    const recipientPin = document.getElementById('recipientPin').value.trim();
     const occasion = document.getElementById('occasion').value.trim();
     const message = document.getElementById('message').value.trim();
     const deliveryDateTime = (selectedDateStr && selectedTimeStr) ? (selectedDateStr + 'T' + selectedTimeStr + ':00') : '';
 
     let valid = true;
-    if (!isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
-    if (recipientPhone && !isValidPhone(recipientPhone)) { setError('recipientPhone'); valid = false; }
+    const hasEmail = recipientEmail.length > 0;
+    const hasPhone = recipientPhone.length > 0;
+
+    if (!hasEmail && !hasPhone) {
+      setError('recipientEmail');
+      setError('recipientPhone');
+      valid = false;
+    } else {
+      if (hasEmail && !isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
+      if (hasPhone && !isValidPhone(recipientPhone)) { setError('recipientPhone'); valid = false; }
+    }
+    if (recipientPin && !/^\d{4}$/.test(recipientPin)) { setError('recipientPin'); valid = false; }
     if (!deliveryDateTime || new Date(deliveryDateTime) < new Date()) { setError('deliveryDate'); valid = false; }
     if (!message) { setError('message'); valid = false; }
 
@@ -1131,7 +1290,7 @@
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPhone, deliveryDate: deliveryDateTime, occasion, message })
+        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPhone, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
       });
 
       if (!res.ok) {
@@ -1151,6 +1310,116 @@
   });
 
   loadArchive();
+
+  /* ---------- Recipient reveal mode (?capsule=ID) ---------- */
+
+  function initRevealMode(id) {
+    document.querySelectorAll('.stage').forEach(el => { el.style.display = 'none'; });
+    const revealScreen = document.getElementById('revealScreen');
+    const revealSeal = document.getElementById('revealSeal');
+    const revealHint = document.getElementById('revealHint');
+    const pinEntry = document.getElementById('revealPinEntry');
+    revealScreen.style.display = 'flex';
+
+    fetch('/api/capsules/' + id + '/reveal')
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          revealHint.textContent = data.error || 'This capsule could not be opened.';
+          revealSeal.style.opacity = '0.35';
+          revealSeal.style.cursor = 'default';
+          return;
+        }
+
+        if (data.requiresPin) {
+          revealHint.textContent = 'Enter the PIN to unlock this capsule.';
+          pinEntry.style.display = 'flex';
+          const submitPin = () => attemptUnlock(id);
+          document.getElementById('revealPinSubmit').addEventListener('click', submitPin);
+          document.getElementById('revealPinInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') submitPin();
+          });
+        } else {
+          revealSeal.addEventListener('click', () => attemptUnlock(id), { once: true });
+        }
+      })
+      .catch(() => {
+        revealHint.textContent = 'Something went wrong loading this capsule.';
+        revealSeal.style.opacity = '0.35';
+        revealSeal.style.cursor = 'default';
+      });
+  }
+
+  function attemptUnlock(id) {
+    const pinInput = document.getElementById('revealPinInput');
+    const pin = pinInput ? pinInput.value.trim() : '';
+    const errorEl = document.getElementById('revealPinError');
+    if (errorEl) errorEl.textContent = '';
+
+    fetch('/api/capsules/' + id + '/reveal', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    })
+      .then(res => res.json().then(data => ({ ok: res.ok, data })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          if (errorEl) {
+            errorEl.textContent = data.error || 'Something went wrong.';
+          } else {
+            document.getElementById('revealHint').textContent = data.error || 'Something went wrong.';
+          }
+          return;
+        }
+        document.getElementById('revealPinEntry').style.display = 'none';
+        breakSeal(data);
+      })
+      .catch(() => {
+        if (errorEl) errorEl.textContent = 'Something went wrong. Try again.';
+      });
+  }
+
+  function breakSeal(capsule) {
+    playStampSound();
+    fireConfetti();
+    const revealSeal = document.getElementById('revealSeal');
+    const revealHint = document.getElementById('revealHint');
+    revealSeal.classList.add('breaking');
+    revealHint.style.display = 'none';
+
+    setTimeout(() => {
+      const content = document.getElementById('revealContent');
+      const metaEl = document.getElementById('revealMeta');
+      const messageEl = document.getElementById('revealMessage');
+      const funNoteEl = document.getElementById('revealFunNote');
+      const from = capsule.senderName ? 'From ' + capsule.senderName : 'A message for you';
+      const occ = capsule.occasion ? ' — ' + capsule.occasion : '';
+      metaEl.textContent = from + occ;
+      funNoteEl.textContent = capsule.funNote || '';
+      content.style.display = 'block';
+      typeRevealMessage(messageEl, capsule.message || '');
+    }, 650);
+  }
+
+  function typeRevealMessage(el, text) {
+    el.textContent = '';
+    let i = 0;
+    const speed = 22;
+    function tick() {
+      if (i <= text.length) {
+        el.textContent = text.slice(0, i);
+        i++;
+        setTimeout(tick, speed);
+      }
+    }
+    tick();
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const viewCapsuleId = urlParams.get('capsule');
+  if (viewCapsuleId) {
+    initRevealMode(viewCapsuleId);
+  }
 </script>
 
 </body>
