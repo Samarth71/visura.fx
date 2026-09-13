@@ -291,6 +291,12 @@
   }
   .time-option:hover { background: var(--hairline-strong); color: var(--ivory); }
   .time-option.time-selected { background: var(--spine-lit); color: var(--obsidian); }
+  .time-option:disabled, .time-option.time-disabled {
+    color: var(--hairline-strong); cursor: not-allowed;
+  }
+  .time-option:disabled:hover, .time-option.time-disabled:hover {
+    background: transparent; color: var(--hairline-strong);
+  }
 
   /* Archive */
   .archive-list { display: flex; flex-direction: column; }
@@ -856,6 +862,17 @@
     else openDatePopover();
   });
 
+  function clampSelectedTimeIfPast() {
+    if (!selectedTimeStr || selectedDateStr !== todayISO()) return;
+    const [h, m] = selectedTimeStr.split(':').map(Number);
+    const now = new Date();
+    if (h * 60 + m <= now.getHours() * 60 + now.getMinutes()) {
+      selectedTimeStr = '';
+      timeTrigger.childNodes[0].textContent = 'Choose a time';
+      timeTrigger.classList.remove('picker-filled');
+    }
+  }
+
   calGrid.addEventListener('click', (e) => {
     const btn = e.target.closest('.cal-day');
     if (!btn || btn.disabled) return;
@@ -863,6 +880,7 @@
     dateTrigger.childNodes[0].textContent = formatDateDisplay(selectedDateStr);
     dateTrigger.classList.add('picker-filled');
     clearFieldError('deliveryDate');
+    clampSelectedTimeIfPast();
     renderCalendar();
     closeDatePopover();
   });
@@ -888,6 +906,7 @@
     dateTrigger.childNodes[0].textContent = formatDateDisplay(selectedDateStr);
     dateTrigger.classList.add('picker-filled');
     clearFieldError('deliveryDate');
+    clampSelectedTimeIfPast();
     renderCalendar();
   });
   calClearBtn.addEventListener('click', (e) => {
@@ -910,13 +929,22 @@
   }
 
   function renderTimeOptions() {
+    const isToday = selectedDateStr === todayISO();
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
     let html = '';
     for (let h = 0; h < 24; h++) {
       for (let m = 0; m < 60; m += 30) {
         const val = pad(h) + ':' + pad(m);
         const label = formatTimeDisplay(val);
         const isSelected = val === selectedTimeStr;
-        html += '<button type="button" class="time-option' + (isSelected ? ' time-selected' : '') + '" data-time="' + val + '">' + label + '</button>';
+        const slotMinutes = h * 60 + m;
+        const isPast = isToday && slotMinutes <= currentMinutes;
+        let cls = 'time-option';
+        if (isSelected) cls += ' time-selected';
+        if (isPast) cls += ' time-disabled';
+        html += '<button type="button" class="' + cls + '" data-time="' + val + '"' + (isPast ? ' disabled' : '') + '>' + label + '</button>';
       }
     }
     timeList.innerHTML = html;
@@ -939,7 +967,7 @@
 
   timeList.addEventListener('click', (e) => {
     const btn = e.target.closest('.time-option');
-    if (!btn) return;
+    if (!btn || btn.disabled) return;
     selectedTimeStr = btn.dataset.time;
     timeTrigger.childNodes[0].textContent = formatTimeDisplay(selectedTimeStr);
     timeTrigger.classList.add('picker-filled');
