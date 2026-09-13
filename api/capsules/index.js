@@ -10,13 +10,14 @@ module.exports = async function handler(req, res) {
       occasion: c.occasion,
       deliveryDate: c.deliveryDate,
       delivered: c.delivered,
+      hasPhone: !!c.recipientPhone,
       createdAt: c.createdAt
     }));
     return res.status(200).json(publicList);
   }
 
   if (req.method === 'POST') {
-    const { recipientName, recipientEmail, deliveryDate, occasion, message, senderName } = req.body || {};
+    const { recipientName, recipientEmail, recipientPhone, deliveryDate, occasion, message, senderName } = req.body || {};
 
     if (!recipientEmail || !deliveryDate || !message) {
       return res.status(400).json({ error: 'recipientEmail, deliveryDate and message are required.' });
@@ -33,6 +34,7 @@ module.exports = async function handler(req, res) {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
       recipientName: recipientName || '',
       recipientEmail,
+      recipientPhone: recipientPhone || '',
       senderName: senderName || '',
       deliveryDate: deliveryTimestamp.toISOString(),
       occasion: occasion || '',
