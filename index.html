@@ -1331,7 +1331,9 @@
     const recipientPin = document.getElementById('recipientPin').value.trim();
     const occasion = document.getElementById('occasion').value.trim();
     const message = document.getElementById('message').value.trim();
-    const deliveryDateTime = (selectedDateStr && selectedTimeStr) ? (selectedDateStr + 'T' + selectedTimeStr + ':00') : '';
+    const deliveryDateTime = (selectedDateStr && selectedTimeStr)
+      ? new Date(selectedDateStr + 'T' + selectedTimeStr + ':00').toISOString()
+      : '';
 
     let valid = true;
     const hasEmail = recipientEmail.length > 0;
