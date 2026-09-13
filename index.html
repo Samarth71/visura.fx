@@ -354,6 +354,34 @@
   }
   @keyframes sealBlink { 50% { opacity: 0; } }
 
+  /* Custom confirm dialog */
+  .confirm-overlay {
+    position: fixed; inset: 0; background: rgba(9,9,11,0.85); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center; z-index: 110;
+    opacity: 0; pointer-events: none; transition: opacity 0.3s var(--ease-lux);
+  }
+  .confirm-overlay.open { opacity: 1; pointer-events: all; }
+  .confirm-box {
+    background: var(--panel); border: 1px solid var(--hairline-strong);
+    padding: 32px; width: 340px; max-width: 88vw; text-align: left;
+    transform: translateY(8px); transition: transform 0.3s var(--ease-lux);
+  }
+  .confirm-overlay.open .confirm-box { transform: translateY(0); }
+  .confirm-title { font-family: 'Cormorant Garamond', serif; font-size: 20px; color: var(--ivory); margin: 0 0 10px; }
+  .confirm-body { font-size: 13px; color: var(--ivory-dim); line-height: 1.6; margin: 0 0 26px; }
+  .confirm-actions { display: flex; justify-content: flex-end; gap: 12px; }
+  .confirm-cancel {
+    background: transparent; border: none; color: var(--ink-muted); font-size: 13px; cursor: pointer;
+    font-family: 'Inter', sans-serif; padding: 8px 4px;
+  }
+  .confirm-cancel:hover { color: var(--ivory); }
+  .confirm-delete {
+    appearance: none; background: transparent; border: 1px solid var(--danger); color: var(--danger);
+    font-family: 'Inter', sans-serif; font-weight: 400; font-size: 13px; letter-spacing: 0.03em;
+    padding: 10px 20px; cursor: pointer; transition: background 0.3s var(--ease-lux), color 0.3s var(--ease-lux);
+  }
+  .confirm-delete:hover { background: var(--danger); color: var(--obsidian); }
+
   @media (prefers-reduced-motion: reduce) {
     .seal-overlay.open .seal-stamp { animation: none; transform: none; opacity: 1; }
     .capsule-card:hover { transform: none; }
@@ -518,6 +546,17 @@
     </div>
     <p class="seal-typewriter" id="sealTypewriter"></p>
     <button type="button" class="capsule-cta" id="sealCloseBtn">Continue</button>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <p class="confirm-title">Delete this capsule?</p>
+    <p class="confirm-body">This can't be undone. The message will be removed before it's ever delivered.</p>
+    <div class="confirm-actions">
+      <button type="button" class="confirm-cancel" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="confirm-delete" id="confirmDeleteBtn">Delete</button>
+    </div>
   </div>
 </div>
 
@@ -932,17 +971,46 @@
 
   cancelEditBtn.addEventListener('click', resetFormState);
 
-  async function deleteCapsule(id) {
-    if (!confirm('Delete this capsule? This cannot be undone.')) return;
+  let pendingDeleteId = null;
+  const confirmOverlay = document.getElementById('confirmOverlay');
+  const confirmCancelBtn = document.getElementById('confirmCancelBtn');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
+  function deleteCapsule(id) {
+    pendingDeleteId = id;
+    confirmOverlay.classList.add('open');
+  }
+
+  function closeConfirmOverlay() {
+    confirmOverlay.classList.remove('open');
+    pendingDeleteId = null;
+  }
+
+  confirmCancelBtn.addEventListener('click', closeConfirmOverlay);
+  confirmOverlay.addEventListener('click', (e) => {
+    if (e.target === confirmOverlay) closeConfirmOverlay();
+  });
+
+  confirmDeleteBtn.addEventListener('click', async () => {
+    const id = pendingDeleteId;
+    if (!id) return;
+    confirmDeleteBtn.disabled = true;
+    confirmDeleteBtn.textContent = 'Deleting…';
     try {
       const res = await fetch('/api/capsules/' + id, { method: 'DELETE' });
       if (!res.ok) throw new Error('Could not delete this capsule.');
       if (editingId === id) resetFormState();
+      closeConfirmOverlay();
       loadArchive();
     } catch (err) {
-      alert(err.message);
+      statusLine.textContent = err.message;
+      statusLine.classList.add('err');
+      closeConfirmOverlay();
+    } finally {
+      confirmDeleteBtn.disabled = false;
+      confirmDeleteBtn.textContent = 'Delete';
     }
-  }
+  });
 
   /* ---------- Seal moment (stamp + typewriter) ---------- */
 
@@ -996,6 +1064,7 @@
     timeTrigger.classList.remove('picker-filled');
     cancelEditBtn.style.display = 'none';
     submitBtn.textContent = 'Seal capsule';
+    submitBtn.disabled = false;
     clearErrors();
     statusLine.textContent = '';
     statusLine.className = 'status-line';
