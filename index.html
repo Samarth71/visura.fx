@@ -308,6 +308,10 @@
 
   .archive-info { flex: 1; min-width: 0; }
   .archive-title-row { font-size: 14px; color: var(--ivory); margin: 0 0 4px; }
+  .wa-tag {
+    display: inline-block; font-size: 9px; letter-spacing: 0.04em; color: var(--sealed);
+    border: 1px solid var(--sealed); padding: 1px 5px; margin-left: 6px; vertical-align: middle;
+  }
   .archive-meta { font-size: 12px; color: var(--ink-muted); }
   .archive-date { font-size: 12px; color: var(--ink-muted); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 
@@ -493,9 +497,16 @@
         </div>
       </div>
 
-      <div class="capsule-field" id="field-occasion">
-        <label for="occasion">Occasion</label>
-        <input type="text" id="occasion" placeholder="18th birthday">
+      <div class="capsule-row">
+        <div class="capsule-field" id="field-occasion">
+          <label for="occasion">Occasion</label>
+          <input type="text" id="occasion" placeholder="18th birthday">
+        </div>
+        <div class="capsule-field" id="field-recipientPhone">
+          <label for="recipientPhone">WhatsApp number <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+          <input type="tel" id="recipientPhone" placeholder="+91XXXXXXXXXX">
+          <p class="field-error">Include the country code, e.g. +91XXXXXXXXXX.</p>
+        </div>
       </div>
 
       <div class="capsule-field" id="field-message" style="margin-bottom: 0;">
@@ -512,7 +523,7 @@
       </div>
 
       <div class="capsule-footer">
-        <p class="capsule-note">Sealed until the date arrives. Sent automatically, by real email.</p>
+        <p class="capsule-note">Sealed until the date arrives. Sent automatically, by real email — and WhatsApp too, if a number's added.</p>
         <div class="capsule-footer-actions">
           <button type="button" class="cancel-edit-btn" id="cancelEditBtn" style="display:none;">Cancel edit</button>
           <button class="capsule-cta" type="submit" id="submitBtn">Seal capsule</button>
@@ -693,6 +704,10 @@
 
   function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function isValidPhone(phone) {
+    return /^\+[1-9]\d{7,14}$/.test(phone);
   }
 
   function escapeHtml(str) {
@@ -911,12 +926,13 @@
         const from = c.senderName ? 'from ' + escapeHtml(c.senderName) + ' · ' : '';
         const state = c.delivered ? 'delivered' : 'pending';
         const countdown = countdownLabel(c.deliveryDate, c.delivered);
+        const waTag = c.hasPhone ? ' <span class="wa-tag" title="Also sends via WhatsApp">WA</span>' : '';
         const editBtn = c.delivered ? '' : '<button type="button" class="archive-action" data-action="edit" data-id="' + c.id + '">Edit</button>';
         return (
           '<div class="archive-row">' +
             '<span class="archive-status ' + state + '"></span>' +
             '<div class="archive-info">' +
-              '<p class="archive-title-row">' + who + occ + '</p>' +
+              '<p class="archive-title-row">' + who + occ + waTag + '</p>' +
               '<p class="archive-meta">' + from + countdown + '</p>' +
             '</div>' +
             '<div class="archive-date">' + dateStr + '</div>' +
@@ -940,14 +956,23 @@
     else if (btn.dataset.action === 'delete') deleteCapsule(id);
   });
 
-  function startEdit(id) {
-    const c = loadedCapsules.find(x => x.id === id);
-    if (!c) return;
+  async function startEdit(id) {
+    let c;
+    try {
+      const res = await fetch('/api/capsules/' + id);
+      if (!res.ok) throw new Error('Could not load this capsule.');
+      c = await res.json();
+    } catch (err) {
+      statusLine.textContent = err.message;
+      statusLine.classList.add('err');
+      return;
+    }
 
     editingId = id;
     document.getElementById('senderName').value = c.senderName || '';
     document.getElementById('recipientName').value = c.recipientName || '';
     document.getElementById('recipientEmail').value = c.recipientEmail || '';
+    document.getElementById('recipientPhone').value = c.recipientPhone || '';
     document.getElementById('occasion').value = c.occasion || '';
     document.getElementById('message').value = c.message || '';
 
@@ -1079,12 +1104,14 @@
     const senderName = document.getElementById('senderName').value.trim();
     const recipientName = document.getElementById('recipientName').value.trim();
     const recipientEmail = document.getElementById('recipientEmail').value.trim();
+    const recipientPhone = document.getElementById('recipientPhone').value.trim();
     const occasion = document.getElementById('occasion').value.trim();
     const message = document.getElementById('message').value.trim();
     const deliveryDateTime = (selectedDateStr && selectedTimeStr) ? (selectedDateStr + 'T' + selectedTimeStr + ':00') : '';
 
     let valid = true;
     if (!isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
+    if (recipientPhone && !isValidPhone(recipientPhone)) { setError('recipientPhone'); valid = false; }
     if (!deliveryDateTime || new Date(deliveryDateTime) < new Date()) { setError('deliveryDate'); valid = false; }
     if (!message) { setError('message'); valid = false; }
 
@@ -1104,7 +1131,7 @@
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, recipientName, recipientEmail, deliveryDate: deliveryDateTime, occasion, message })
+        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPhone, deliveryDate: deliveryDateTime, occasion, message })
       });
 
       if (!res.ok) {
