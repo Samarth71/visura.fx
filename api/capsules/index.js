@@ -11,16 +11,21 @@ module.exports = async function handler(req, res) {
       deliveryDate: c.deliveryDate,
       delivered: c.delivered,
       hasPhone: !!c.recipientPhone,
+      hasPin: !!c.recipientPin,
       createdAt: c.createdAt
     }));
     return res.status(200).json(publicList);
   }
 
   if (req.method === 'POST') {
-    const { recipientName, recipientEmail, recipientPhone, deliveryDate, occasion, message, senderName } = req.body || {};
+    const { recipientName, recipientEmail, recipientPhone, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
 
-    if (!recipientEmail || !deliveryDate || !message) {
-      return res.status(400).json({ error: 'recipientEmail, deliveryDate and message are required.' });
+    if ((!recipientEmail && !recipientPhone) || !deliveryDate || !message) {
+      return res.status(400).json({ error: 'Provide a recipient email or WhatsApp number, plus deliveryDate and message.' });
+    }
+
+    if (recipientPin && !/^\d{4}$/.test(recipientPin)) {
+      return res.status(400).json({ error: 'PIN must be exactly 4 digits.' });
     }
 
     const deliveryTimestamp = new Date(deliveryDate);
@@ -33,8 +38,9 @@ module.exports = async function handler(req, res) {
     const newCapsule = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
       recipientName: recipientName || '',
-      recipientEmail,
+      recipientEmail: recipientEmail || '',
       recipientPhone: recipientPhone || '',
+      recipientPin: recipientPin || '',
       senderName: senderName || '',
       deliveryDate: deliveryTimestamp.toISOString(),
       occasion: occasion || '',
