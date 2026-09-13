@@ -1,5 +1,6 @@
 const { getCapsules, saveCapsules } = require('../../lib/db');
 const { sendCapsuleEmail } = require('../../lib/mailer');
+const { sendCapsuleWhatsApp } = require('../../lib/whatsapp');
 
 module.exports = async function handler(req, res) {
   if (process.env.CRON_SECRET) {
@@ -16,15 +17,30 @@ module.exports = async function handler(req, res) {
 
   for (const capsule of capsules) {
     if (!capsule.delivered && new Date(capsule.deliveryDate) <= now) {
+      const result = { id: capsule.id };
+
       try {
         await sendCapsuleEmail(capsule);
-        capsule.delivered = true;
-        capsule.deliveredAt = new Date().toISOString();
-        changed = true;
-        results.push({ id: capsule.id, status: 'sent' });
+        result.email = 'sent';
       } catch (err) {
-        results.push({ id: capsule.id, status: 'failed', error: err.message });
+        result.email = 'failed';
+        result.emailError = err.message;
       }
+
+      if (capsule.recipientPhone) {
+        try {
+          await sendCapsuleWhatsApp(capsule);
+          result.whatsapp = 'sent';
+        } catch (err) {
+          result.whatsapp = 'failed';
+          result.whatsappError = err.message;
+        }
+      }
+
+      capsule.delivered = true;
+      capsule.deliveredAt = new Date().toISOString();
+      changed = true;
+      results.push(result);
     }
   }
 
