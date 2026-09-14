@@ -1,4 +1,4 @@
-\const { getCapsules, saveCapsules } = require('../../lib/db');
+const { getCapsules, saveCapsules } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
