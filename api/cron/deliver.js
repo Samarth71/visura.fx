@@ -1,6 +1,5 @@
 const { getCapsules, saveCapsules } = require('../../lib/db');
 const { sendCapsuleEmail } = require('../../lib/mailer');
-const { sendCapsuleWhatsApp } = require('../../lib/whatsapp');
 
 module.exports = async function handler(req, res) {
   if (process.env.CRON_SECRET) {
@@ -25,16 +24,6 @@ module.exports = async function handler(req, res) {
       } catch (err) {
         result.email = 'failed';
         result.emailError = err.message;
-      }
-
-      if (capsule.recipientPhone) {
-        try {
-          await sendCapsuleWhatsApp(capsule);
-          result.whatsapp = 'sent';
-        } catch (err) {
-          result.whatsapp = 'failed';
-          result.whatsappError = err.message;
-        }
       }
 
       capsule.delivered = true;
