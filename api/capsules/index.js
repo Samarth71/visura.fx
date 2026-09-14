@@ -1,4 +1,4 @@
-const { getCapsules, saveCapsules } = require('../../lib/db');
+\const { getCapsules, saveCapsules } = require('../../lib/db');
 
 module.exports = async function handler(req, res) {
   if (req.method === 'GET') {
@@ -10,18 +10,16 @@ module.exports = async function handler(req, res) {
       occasion: c.occasion,
       deliveryDate: c.deliveryDate,
       delivered: c.delivered,
-      hasPhone: !!c.recipientPhone,
-      hasPin: !!c.recipientPin,
       createdAt: c.createdAt
     }));
     return res.status(200).json(publicList);
   }
 
   if (req.method === 'POST') {
-    const { recipientName, recipientEmail, recipientPhone, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
+    const { recipientName, recipientEmail, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
 
-    if ((!recipientEmail && !recipientPhone) || !deliveryDate || !message) {
-      return res.status(400).json({ error: 'Provide a recipient email or WhatsApp number, plus deliveryDate and message.' });
+    if (!recipientEmail || !deliveryDate || !message) {
+      return res.status(400).json({ error: 'recipientEmail, deliveryDate and message are required.' });
     }
 
     if (recipientPin && !/^\d{4}$/.test(recipientPin)) {
@@ -38,8 +36,7 @@ module.exports = async function handler(req, res) {
     const newCapsule = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
       recipientName: recipientName || '',
-      recipientEmail: recipientEmail || '',
-      recipientPhone: recipientPhone || '',
+      recipientEmail,
       recipientPin: recipientPin || '',
       senderName: senderName || '',
       deliveryDate: deliveryTimestamp.toISOString(),
