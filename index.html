@@ -537,9 +537,9 @@
           <input type="text" id="recipientName" placeholder="Their name">
         </div>
         <div class="capsule-field" id="field-recipientEmail">
-          <label for="recipientEmail">Recipient email <span style="color: var(--ink-muted); font-weight: 300;">(or WhatsApp below)</span></label>
+          <label for="recipientEmail">Recipient email</label>
           <input type="email" id="recipientEmail" placeholder="name@email.com">
-          <p class="field-error">Enter a valid email, or add a WhatsApp number below.</p>
+          <p class="field-error">Enter a valid email address.</p>
         </div>
       </div>
 
@@ -581,16 +581,9 @@
         </div>
       </div>
 
-      <div class="capsule-row">
-        <div class="capsule-field" id="field-occasion">
-          <label for="occasion">Occasion</label>
-          <input type="text" id="occasion" placeholder="18th birthday">
-        </div>
-        <div class="capsule-field" id="field-recipientPhone">
-          <label for="recipientPhone">WhatsApp number <span style="color: var(--ink-muted); font-weight: 300;">(or email above)</span></label>
-          <input type="tel" id="recipientPhone" placeholder="+91XXXXXXXXXX">
-          <p class="field-error">Include the country code, e.g. +91XXXXXXXXXX — or add an email above.</p>
-        </div>
+      <div class="capsule-field" id="field-occasion">
+        <label for="occasion">Occasion</label>
+        <input type="text" id="occasion" placeholder="18th birthday">
       </div>
 
       <div class="capsule-field" id="field-recipientPin">
@@ -613,7 +606,7 @@
       </div>
 
       <div class="capsule-footer">
-        <p class="capsule-note">Sealed until the date arrives. Sent automatically, by real email — and WhatsApp too, if a number's added.</p>
+        <p class="capsule-note">Sealed until the date arrives. Sent automatically, by real email.</p>
         <div class="capsule-footer-actions">
           <button type="button" class="cancel-edit-btn" id="cancelEditBtn" style="display:none;">Cancel edit</button>
           <button class="capsule-cta" type="submit" id="submitBtn">Seal capsule</button>
@@ -1090,13 +1083,12 @@
         const from = c.senderName ? 'from ' + escapeHtml(c.senderName) + ' · ' : '';
         const state = c.delivered ? 'delivered' : 'pending';
         const countdown = countdownLabel(c.deliveryDate, c.delivered);
-        const waTag = c.hasPhone ? ' <span class="wa-tag" title="Also sends via WhatsApp">WA</span>' : '';
         const editBtn = c.delivered ? '' : '<button type="button" class="archive-action" data-action="edit" data-id="' + c.id + '">Edit</button>';
         return (
           '<div class="archive-row">' +
             '<span class="archive-status ' + state + '"></span>' +
             '<div class="archive-info">' +
-              '<p class="archive-title-row">' + who + occ + waTag + '</p>' +
+              '<p class="archive-title-row">' + who + occ + '</p>' +
               '<p class="archive-meta">' + from + countdown + '</p>' +
             '</div>' +
             '<div class="archive-date">' + dateStr + '</div>' +
@@ -1136,7 +1128,6 @@
     document.getElementById('senderName').value = c.senderName || '';
     document.getElementById('recipientName').value = c.recipientName || '';
     document.getElementById('recipientEmail').value = c.recipientEmail || '';
-    document.getElementById('recipientPhone').value = c.recipientPhone || '';
     document.getElementById('recipientPin').value = c.recipientPin || '';
     document.getElementById('occasion').value = c.occasion || '';
     document.getElementById('message').value = c.message || '';
@@ -1327,7 +1318,6 @@
     const senderName = document.getElementById('senderName').value.trim();
     const recipientName = document.getElementById('recipientName').value.trim();
     const recipientEmail = document.getElementById('recipientEmail').value.trim();
-    const recipientPhone = document.getElementById('recipientPhone').value.trim();
     const recipientPin = document.getElementById('recipientPin').value.trim();
     const occasion = document.getElementById('occasion').value.trim();
     const message = document.getElementById('message').value.trim();
@@ -1336,17 +1326,7 @@
       : '';
 
     let valid = true;
-    const hasEmail = recipientEmail.length > 0;
-    const hasPhone = recipientPhone.length > 0;
-
-    if (!hasEmail && !hasPhone) {
-      setError('recipientEmail');
-      setError('recipientPhone');
-      valid = false;
-    } else {
-      if (hasEmail && !isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
-      if (hasPhone && !isValidPhone(recipientPhone)) { setError('recipientPhone'); valid = false; }
-    }
+    if (!isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
     if (recipientPin && !/^\d{4}$/.test(recipientPin)) { setError('recipientPin'); valid = false; }
     if (!deliveryDateTime || new Date(deliveryDateTime) < new Date()) { setError('deliveryDate'); valid = false; }
     if (!message) { setError('message'); valid = false; }
@@ -1367,7 +1347,7 @@
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPhone, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
+        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
       });
 
       if (!res.ok) {
