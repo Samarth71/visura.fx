@@ -21,14 +21,15 @@ module.exports = async function handler(req, res) {
       try {
         await sendCapsuleEmail(capsule);
         result.email = 'sent';
+        capsule.delivered = true;
+        capsule.deliveredAt = new Date().toISOString();
+        changed = true;
       } catch (err) {
         result.email = 'failed';
         result.emailError = err.message;
+        // Leave delivered = false so the next cron run retries automatically.
       }
 
-      capsule.delivered = true;
-      capsule.deliveredAt = new Date().toISOString();
-      changed = true;
       results.push(result);
     }
   }
