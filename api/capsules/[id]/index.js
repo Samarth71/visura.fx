@@ -13,10 +13,10 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'PUT') {
-    const { recipientName, recipientEmail, recipientPhone, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
+    const { recipientName, recipientEmail, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
 
-    if ((!recipientEmail && !recipientPhone) || !deliveryDate || !message) {
-      return res.status(400).json({ error: 'Provide a recipient email or WhatsApp number, plus deliveryDate and message.' });
+    if (!recipientEmail || !deliveryDate || !message) {
+      return res.status(400).json({ error: 'recipientEmail, deliveryDate and message are required.' });
     }
 
     if (recipientPin && !/^\d{4}$/.test(recipientPin)) {
@@ -42,8 +42,7 @@ module.exports = async function handler(req, res) {
     capsules[index] = {
       ...capsules[index],
       recipientName: recipientName || '',
-      recipientEmail: recipientEmail || '',
-      recipientPhone: recipientPhone || '',
+      recipientEmail,
       recipientPin: recipientPin || '',
       senderName: senderName || '',
       deliveryDate: deliveryTimestamp.toISOString(),
