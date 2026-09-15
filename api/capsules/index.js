@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    const { recipientName, recipientEmail, recipientPin, deliveryDate, occasion, message, senderName } = req.body || {};
+    const { recipientName, recipientEmail, recipientPin, deliveryDate, occasion, message, senderName, senderEmail } = req.body || {};
 
     if (!recipientEmail || !deliveryDate || !message) {
       return res.status(400).json({ error: 'recipientEmail, deliveryDate and message are required.' });
@@ -39,6 +39,7 @@ module.exports = async function handler(req, res) {
       recipientEmail,
       recipientPin: recipientPin || '',
       senderName: senderName || '',
+      senderEmail: senderEmail || '',
       deliveryDate: deliveryTimestamp.toISOString(),
       occasion: occasion || '',
       message,
