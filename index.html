@@ -465,6 +465,33 @@
     margin-top: 30px; font-size: 13px; color: var(--ivory-dim); font-style: italic;
     opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.3s;
   }
+
+  .reveal-actions {
+    margin-top: 36px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
+    opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.5s;
+  }
+  .reveal-action-btn {
+    appearance: none; background: transparent; border: 1px solid var(--hairline-strong); color: var(--ivory-dim);
+    font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.03em; padding: 10px 18px; cursor: pointer;
+    transition: border-color 0.3s var(--ease-lux), color 0.3s var(--ease-lux);
+  }
+  .reveal-action-btn:hover { border-color: var(--spine-lit); color: var(--ivory); }
+
+  .reply-form {
+    margin-top: 32px; text-align: left; background: var(--panel); border: 1px solid var(--hairline-strong);
+    padding: 26px; max-width: 420px; margin-left: auto; margin-right: auto;
+  }
+  .reply-form .capsule-field { margin-bottom: 18px; }
+  .reply-form label { display: block; font-size: 11px; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 8px; }
+  .reply-form input, .reply-form textarea {
+    width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--hairline-strong);
+    color: var(--ivory); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 14px;
+    padding: 6px 2px 10px; color-scheme: dark;
+  }
+  .reply-form input:focus, .reply-form textarea:focus { outline: none; border-bottom-color: var(--ivory); }
+  .reply-status { font-size: 12px; margin: 4px 0 16px; min-height: 14px; }
+  .reply-status.err { color: var(--danger); }
+  .reply-status.ok { color: var(--sealed); }
   .reveal-back-link {
     display: inline-block; margin-top: 40px; font-size: 12px; color: var(--ink-muted);
     text-decoration: underline; cursor: pointer;
@@ -526,9 +553,16 @@
     <form class="capsule-card" id="capsuleForm" novalidate>
       <span class="capsule-corner" aria-hidden="true"></span>
 
-      <div class="capsule-field" id="field-senderName">
-        <label for="senderName">Your name</label>
-        <input type="text" id="senderName" placeholder="Who this is from">
+      <div class="capsule-row">
+        <div class="capsule-field" id="field-senderName">
+          <label for="senderName">Your name</label>
+          <input type="text" id="senderName" placeholder="Who this is from">
+        </div>
+        <div class="capsule-field" id="field-senderEmail">
+          <label for="senderEmail">Your email <span style="color: var(--ink-muted); font-weight: 300;">(optional, so they can reply)</span></label>
+          <input type="email" id="senderEmail" placeholder="you@email.com">
+          <p class="field-error">Enter a valid email address.</p>
+        </div>
       </div>
 
       <div class="capsule-row">
@@ -674,6 +708,26 @@
       <span class="reveal-badge" id="revealBadge">Verified &amp; safe</span>
       <p class="reveal-message" id="revealMessage"></p>
       <p class="reveal-fun-note" id="revealFunNote"></p>
+      <div class="reveal-actions">
+        <button type="button" class="reveal-action-btn" id="revealKeepsakeBtn">Save as keepsake</button>
+        <button type="button" class="reveal-action-btn" id="revealReplyBtn" style="display:none;">Reply with your own capsule</button>
+      </div>
+      <div class="reply-form" id="replyForm" style="display:none;">
+        <div class="capsule-field">
+          <label for="replyName">Your name</label>
+          <input type="text" id="replyName" placeholder="Who this reply is from">
+        </div>
+        <div class="capsule-field">
+          <label for="replyWhen">When should it arrive</label>
+          <input type="datetime-local" id="replyWhen" class="reply-datetime">
+        </div>
+        <div class="capsule-field" style="margin-bottom: 0;">
+          <label for="replyMessage">Your reply</label>
+          <textarea id="replyMessage" rows="4" placeholder="Write your reply..."></textarea>
+        </div>
+        <p class="reply-status" id="replyStatus"></p>
+        <button type="button" class="capsule-cta" id="replySubmitBtn">Seal reply</button>
+      </div>
     </div>
     <a class="reveal-back-link" id="revealBackLink" href="/">Back to visuraa</a>
   </div>
@@ -1126,6 +1180,7 @@
 
     editingId = id;
     document.getElementById('senderName').value = c.senderName || '';
+    document.getElementById('senderEmail').value = c.senderEmail || '';
     document.getElementById('recipientName').value = c.recipientName || '';
     document.getElementById('recipientEmail').value = c.recipientEmail || '';
     document.getElementById('recipientPin').value = c.recipientPin || '';
@@ -1316,6 +1371,7 @@
     statusLine.className = 'status-line';
 
     const senderName = document.getElementById('senderName').value.trim();
+    const senderEmail = document.getElementById('senderEmail').value.trim();
     const recipientName = document.getElementById('recipientName').value.trim();
     const recipientEmail = document.getElementById('recipientEmail').value.trim();
     const recipientPin = document.getElementById('recipientPin').value.trim();
@@ -1327,6 +1383,7 @@
 
     let valid = true;
     if (!isValidEmail(recipientEmail)) { setError('recipientEmail'); valid = false; }
+    if (senderEmail && !isValidEmail(senderEmail)) { setError('senderEmail'); valid = false; }
     if (recipientPin && !/^\d{4}$/.test(recipientPin)) { setError('recipientPin'); valid = false; }
     if (!deliveryDateTime || new Date(deliveryDateTime) < new Date()) { setError('deliveryDate'); valid = false; }
     if (!message) { setError('message'); valid = false; }
@@ -1347,7 +1404,7 @@
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, recipientName, recipientEmail, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
+        body: JSON.stringify({ senderName, senderEmail, recipientName, recipientEmail, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
       });
 
       if (!res.ok) {
@@ -1437,9 +1494,12 @@
       });
   }
 
+  let revealedCapsule = null;
+
   function breakSeal(capsule) {
     playStampSound();
     fireConfetti();
+    revealedCapsule = capsule;
     const revealSeal = document.getElementById('revealSeal');
     const revealHint = document.getElementById('revealHint');
     revealSeal.classList.add('breaking');
@@ -1455,9 +1515,162 @@
       metaEl.textContent = from + occ;
       funNoteEl.textContent = capsule.funNote || '';
       content.style.display = 'block';
+      if (capsule.senderEmail) {
+        document.getElementById('revealReplyBtn').style.display = 'inline-block';
+      }
       typeRevealMessage(messageEl, capsule.message || '');
     }, 650);
   }
+
+  /* ---------- Save as keepsake ---------- */
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+    const words = text.split(' ');
+    let line = '';
+    let curY = y;
+    for (let n = 0; n < words.length; n++) {
+      const testLine = line + words[n] + ' ';
+      const metrics = ctx.measureText(testLine);
+      if (metrics.width > maxWidth && n > 0) {
+        ctx.fillText(line.trim(), x, curY);
+        line = words[n] + ' ';
+        curY += lineHeight;
+      } else {
+        line = testLine;
+      }
+    }
+    ctx.fillText(line.trim(), x, curY);
+    return curY;
+  }
+
+  function generateKeepsakeCanvas(capsule) {
+    const width = 900;
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = 1100;
+    const ctx = canvas.getContext('2d');
+
+    ctx.fillStyle = '#09090b';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#2c2c31';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
+
+    ctx.strokeStyle = '#8a7e63';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.arc(width / 2, 140, 38, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(width / 2, 140, 26, 0, Math.PI * 2); ctx.stroke();
+
+    ctx.fillStyle = '#66666d';
+    ctx.font = '15px Inter, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('V I S U R A A   —   T H E   L E G A C Y   A R C H I V E', width / 2, 230);
+
+    const from = capsule.senderName ? 'FROM ' + capsule.senderName.toUpperCase() : 'A MESSAGE FOR YOU';
+    const occ = capsule.occasion ? '  —  ' + capsule.occasion.toUpperCase() : '';
+    ctx.fillStyle = '#8a7e63';
+    ctx.font = '13px Inter, Arial, sans-serif';
+    ctx.fillText(from + occ, width / 2, 280);
+
+    ctx.fillStyle = '#f2ede4';
+    ctx.font = '32px Georgia, serif';
+    const endY = wrapCanvasText(ctx, capsule.message || '', width / 2, 400, width - 200, 48);
+
+    if (capsule.funNote) {
+      ctx.fillStyle = '#b7b1a5';
+      ctx.font = 'italic 17px Georgia, serif';
+      ctx.fillText(capsule.funNote, width / 2, Math.min(endY + 90, canvas.height - 120));
+    }
+
+    ctx.fillStyle = '#66666d';
+    ctx.font = '12px Inter, Arial, sans-serif';
+    ctx.fillText(new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }), width / 2, canvas.height - 70);
+
+    return canvas;
+  }
+
+  document.getElementById('revealKeepsakeBtn').addEventListener('click', () => {
+    if (!revealedCapsule) return;
+    const canvas = generateKeepsakeCanvas(revealedCapsule);
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'visuraa-keepsake.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    });
+  });
+
+  /* ---------- Reply with your own capsule ---------- */
+
+  document.getElementById('revealReplyBtn').addEventListener('click', () => {
+    const replyForm = document.getElementById('replyForm');
+    const isOpen = replyForm.style.display === 'block';
+    replyForm.style.display = isOpen ? 'none' : 'block';
+    if (!isOpen && revealedCapsule) {
+      document.getElementById('replyName').value = revealedCapsule.recipientName || '';
+    }
+  });
+
+  document.getElementById('replySubmitBtn').addEventListener('click', async () => {
+    const replyStatus = document.getElementById('replyStatus');
+    replyStatus.textContent = '';
+    replyStatus.className = 'reply-status';
+
+    if (!revealedCapsule || !revealedCapsule.senderEmail) return;
+
+    const replyName = document.getElementById('replyName').value.trim();
+    const replyWhen = document.getElementById('replyWhen').value;
+    const replyMessage = document.getElementById('replyMessage').value.trim();
+
+    if (!replyWhen || new Date(replyWhen) < new Date()) {
+      replyStatus.textContent = 'Pick a date and time in the future.';
+      replyStatus.classList.add('err');
+      return;
+    }
+    if (!replyMessage) {
+      replyStatus.textContent = 'Write a reply before sealing.';
+      replyStatus.classList.add('err');
+      return;
+    }
+
+    const replySubmitBtn = document.getElementById('replySubmitBtn');
+    replySubmitBtn.disabled = true;
+    replySubmitBtn.textContent = 'Sealing…';
+
+    try {
+      const res = await fetch('/api/capsules', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          senderName: replyName,
+          recipientName: revealedCapsule.senderName,
+          recipientEmail: revealedCapsule.senderEmail,
+          deliveryDate: new Date(replyWhen).toISOString(),
+          occasion: 'A reply',
+          message: replyMessage
+        })
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Something went wrong.');
+      }
+
+      replyStatus.textContent = 'Reply sealed. It will reach them right on time.';
+      replyStatus.classList.add('ok');
+      document.getElementById('replyMessage').value = '';
+    } catch (err) {
+      replyStatus.textContent = err.message;
+      replyStatus.classList.add('err');
+    } finally {
+      replySubmitBtn.disabled = false;
+      replySubmitBtn.textContent = 'Seal reply';
+    }
+  });
 
   function typeRevealMessage(el, text) {
     el.textContent = '';
