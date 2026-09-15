@@ -33,6 +33,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       recipientName: capsule.recipientName,
       senderName: capsule.senderName,
+      senderEmail: capsule.senderEmail || '',
       occasion: capsule.occasion,
       message: capsule.message,
       funNote: pickFunNote(capsule.occasion)
