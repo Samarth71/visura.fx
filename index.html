@@ -479,19 +479,43 @@
 
   .reply-form {
     margin-top: 32px; text-align: left; background: var(--panel); border: 1px solid var(--hairline-strong);
-    padding: 26px; max-width: 420px; margin-left: auto; margin-right: auto;
+    padding: 30px; max-width: 440px; margin-left: auto; margin-right: auto;
   }
-  .reply-form .capsule-field { margin-bottom: 18px; }
+  .reply-form-title { font-family: 'Cormorant Garamond', serif; font-size: 21px; color: var(--ivory); margin: 0 0 6px; }
+  .reply-form-sub { font-size: 12px; color: var(--ink-muted); margin: 0 0 22px; }
+  .reply-form .capsule-field { margin-bottom: 20px; }
   .reply-form label { display: block; font-size: 11px; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 8px; }
   .reply-form input, .reply-form textarea {
     width: 100%; background: transparent; border: none; border-bottom: 1px solid var(--hairline-strong);
     color: var(--ivory); font-family: 'Inter', sans-serif; font-weight: 300; font-size: 14px;
-    padding: 6px 2px 10px; color-scheme: dark;
+    padding: 7px 2px 11px; color-scheme: dark;
   }
   .reply-form input:focus, .reply-form textarea:focus { outline: none; border-bottom-color: var(--ivory); }
-  .reply-status { font-size: 12px; margin: 4px 0 16px; min-height: 14px; }
+  .reply-datetime { accent-color: var(--spine-lit); cursor: pointer; }
+  .reply-status { font-size: 12px; margin: 4px 0 18px; min-height: 14px; }
   .reply-status.err { color: var(--danger); }
   .reply-status.ok { color: var(--sealed); }
+
+  /* Photo attachment */
+  .photo-picker-btn {
+    appearance: none; background: transparent; border: 1px solid var(--hairline-strong); color: var(--ivory-dim);
+    font-family: 'Inter', sans-serif; font-size: 12px; letter-spacing: 0.03em; padding: 9px 16px; cursor: pointer;
+    transition: border-color 0.3s var(--ease-lux), color 0.3s var(--ease-lux);
+  }
+  .photo-picker-btn:hover { border-color: var(--spine-lit); color: var(--ivory); }
+  .photo-preview { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+  .photo-preview img {
+    width: 64px; height: 64px; object-fit: cover; border: 1px solid var(--hairline-strong);
+  }
+  .photo-remove-btn {
+    background: transparent; border: none; color: var(--ink-muted); font-size: 11px; letter-spacing: 0.03em;
+    cursor: pointer; text-decoration: underline; font-family: 'Inter', sans-serif;
+  }
+  .photo-remove-btn:hover { color: var(--danger); }
+  .reveal-photo {
+    max-width: 100%; max-height: 340px; margin: 0 auto 28px; display: block; border: 1px solid var(--hairline-strong);
+    opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.1s;
+  }
   .reveal-back-link {
     display: inline-block; margin-top: 40px; font-size: 12px; color: var(--ink-muted);
     text-decoration: underline; cursor: pointer;
@@ -639,6 +663,19 @@
         <p class="field-error">Write a message before sealing.</p>
       </div>
 
+      <div class="capsule-field" id="field-photo" style="margin-top: 24px;">
+        <label>Photo <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+        <div class="photo-picker" id="photoPicker">
+          <input type="file" id="photoInput" accept="image/*" style="display:none;">
+          <button type="button" class="photo-picker-btn" id="photoPickerBtn">Attach a photo</button>
+          <div class="photo-preview" id="photoPreview" style="display:none;">
+            <img id="photoPreviewImg" alt="Attached photo preview">
+            <button type="button" class="photo-remove-btn" id="photoRemoveBtn">Remove</button>
+          </div>
+        </div>
+        <p class="field-error" id="photoError">Photo is too large — please use one under 1.5MB.</p>
+      </div>
+
       <div class="capsule-footer">
         <p class="capsule-note">Sealed until the date arrives. Sent automatically, by real email.</p>
         <div class="capsule-footer-actions">
@@ -704,6 +741,7 @@
       <p class="reveal-pin-error" id="revealPinError"></p>
     </div>
     <div class="reveal-content" id="revealContent" style="display:none;">
+      <img class="reveal-photo" id="revealPhoto" style="display:none;" alt="A photo shared with this capsule">
       <p class="reveal-meta" id="revealMeta"></p>
       <span class="reveal-badge" id="revealBadge">Verified &amp; safe</span>
       <p class="reveal-message" id="revealMessage"></p>
@@ -713,6 +751,8 @@
         <button type="button" class="reveal-action-btn" id="revealReplyBtn" style="display:none;">Reply with your own capsule</button>
       </div>
       <div class="reply-form" id="replyForm" style="display:none;">
+        <p class="reply-form-title">Send a reply</p>
+        <p class="reply-form-sub">Sealed the same way — private until it arrives.</p>
         <div class="capsule-field">
           <label for="replyName">Your name</label>
           <input type="text" id="replyName" placeholder="Who this reply is from">
@@ -721,9 +761,20 @@
           <label for="replyWhen">When should it arrive</label>
           <input type="datetime-local" id="replyWhen" class="reply-datetime">
         </div>
-        <div class="capsule-field" style="margin-bottom: 0;">
+        <div class="capsule-field">
           <label for="replyMessage">Your reply</label>
           <textarea id="replyMessage" rows="4" placeholder="Write your reply..."></textarea>
+        </div>
+        <div class="capsule-field" style="margin-bottom: 0;">
+          <label>Photo <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+          <div class="photo-picker" id="replyPhotoPicker">
+            <input type="file" id="replyPhotoInput" accept="image/*" style="display:none;">
+            <button type="button" class="photo-picker-btn" id="replyPhotoPickerBtn">Attach a photo</button>
+            <div class="photo-preview" id="replyPhotoPreview" style="display:none;">
+              <img id="replyPhotoPreviewImg" alt="Attached photo preview">
+              <button type="button" class="photo-remove-btn" id="replyPhotoRemoveBtn">Remove</button>
+            </div>
+          </div>
         </div>
         <p class="reply-status" id="replyStatus"></p>
         <button type="button" class="capsule-cta" id="replySubmitBtn">Seal reply</button>
@@ -829,6 +880,59 @@
   });
 
   let loadedCapsules = [];
+  let selectedPhotoData = '';
+  let selectedReplyPhotoData = '';
+
+  const MAX_PHOTO_BYTES = 1.5 * 1024 * 1024;
+
+  function wirePhotoPicker(opts) {
+    const pickBtn = document.getElementById(opts.pickBtnId);
+    const fileInput = document.getElementById(opts.inputId);
+    const preview = document.getElementById(opts.previewId);
+    const previewImg = document.getElementById(opts.previewImgId);
+    const removeBtn = document.getElementById(opts.removeBtnId);
+    const errorEl = opts.errorId ? document.getElementById(opts.errorId) : null;
+
+    pickBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', () => {
+      const file = fileInput.files[0];
+      if (!file) return;
+      if (file.size > MAX_PHOTO_BYTES) {
+        if (errorEl) { errorEl.style.display = 'block'; }
+        fileInput.value = '';
+        return;
+      }
+      if (errorEl) errorEl.style.display = 'none';
+      const reader = new FileReader();
+      reader.onload = () => {
+        opts.onLoad(reader.result);
+        previewImg.src = reader.result;
+        preview.style.display = 'flex';
+        pickBtn.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    });
+
+    removeBtn.addEventListener('click', () => {
+      opts.onLoad('');
+      fileInput.value = '';
+      preview.style.display = 'none';
+      pickBtn.style.display = 'inline-block';
+    });
+  }
+
+  wirePhotoPicker({
+    pickBtnId: 'photoPickerBtn', inputId: 'photoInput', previewId: 'photoPreview',
+    previewImgId: 'photoPreviewImg', removeBtnId: 'photoRemoveBtn', errorId: 'photoError',
+    onLoad: (data) => { selectedPhotoData = data; }
+  });
+
+  wirePhotoPicker({
+    pickBtnId: 'replyPhotoPickerBtn', inputId: 'replyPhotoInput', previewId: 'replyPhotoPreview',
+    previewImgId: 'replyPhotoPreviewImg', removeBtnId: 'replyPhotoRemoveBtn',
+    onLoad: (data) => { selectedReplyPhotoData = data; }
+  });
   let editingId = null;
 
   const now = new Date();
@@ -1186,6 +1290,16 @@
     document.getElementById('recipientPin').value = c.recipientPin || '';
     document.getElementById('occasion').value = c.occasion || '';
     document.getElementById('message').value = c.message || '';
+    if (c.photo) {
+      selectedPhotoData = c.photo;
+      document.getElementById('photoPreviewImg').src = c.photo;
+      document.getElementById('photoPreview').style.display = 'flex';
+      document.getElementById('photoPickerBtn').style.display = 'none';
+    } else {
+      selectedPhotoData = '';
+      document.getElementById('photoPreview').style.display = 'none';
+      document.getElementById('photoPickerBtn').style.display = 'inline-block';
+    }
 
     const d = new Date(c.deliveryDate);
     selectedDateStr = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -1359,6 +1473,10 @@
     cancelEditBtn.style.display = 'none';
     submitBtn.textContent = 'Seal capsule';
     submitBtn.disabled = false;
+    selectedPhotoData = '';
+    document.getElementById('photoInput').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoPickerBtn').style.display = 'inline-block';
     clearErrors();
     statusLine.textContent = '';
     statusLine.className = 'status-line';
@@ -1404,7 +1522,7 @@
       const res = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ senderName, senderEmail, recipientName, recipientEmail, recipientPin, deliveryDate: deliveryDateTime, occasion, message })
+        body: JSON.stringify({ senderName, senderEmail, recipientName, recipientEmail, recipientPin, deliveryDate: deliveryDateTime, occasion, message, photo: selectedPhotoData })
       });
 
       if (!res.ok) {
@@ -1515,6 +1633,13 @@
       metaEl.textContent = from + occ;
       funNoteEl.textContent = capsule.funNote || '';
       content.style.display = 'block';
+      const revealPhoto = document.getElementById('revealPhoto');
+      if (capsule.photo) {
+        revealPhoto.src = capsule.photo;
+        revealPhoto.style.display = 'block';
+      } else {
+        revealPhoto.style.display = 'none';
+      }
       if (capsule.senderEmail) {
         document.getElementById('revealReplyBtn').style.display = 'inline-block';
       }
@@ -1543,7 +1668,16 @@
     return curY;
   }
 
-  function generateKeepsakeCanvas(capsule) {
+  function loadImageEl(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  async function generateKeepsakeCanvas(capsule) {
     const width = 900;
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -1556,25 +1690,54 @@
     ctx.lineWidth = 1;
     ctx.strokeRect(36, 36, canvas.width - 72, canvas.height - 72);
 
+    let topY = 140;
+    let photoBottom = 0;
+
+    if (capsule.photo) {
+      try {
+        const img = await loadImageEl(capsule.photo);
+        const boxW = width - 200;
+        const boxH = 300;
+        const scale = Math.max(boxW / img.width, boxH / img.height);
+        const drawW = img.width * scale;
+        const drawH = img.height * scale;
+        const dx = (width - drawW) / 2;
+        const dy = 80;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(100, dy, boxW, boxH);
+        ctx.clip();
+        ctx.drawImage(img, dx, dy - (drawH - boxH) / 2, drawW, drawH);
+        ctx.restore();
+        ctx.strokeStyle = '#2c2c31';
+        ctx.strokeRect(100, dy, boxW, boxH);
+        photoBottom = dy + boxH + 50;
+      } catch (err) {
+        photoBottom = 0;
+      }
+    }
+
+    topY = photoBottom || 140;
+
     ctx.strokeStyle = '#8a7e63';
     ctx.lineWidth = 1.2;
-    ctx.beginPath(); ctx.arc(width / 2, 140, 38, 0, Math.PI * 2); ctx.stroke();
-    ctx.beginPath(); ctx.arc(width / 2, 140, 26, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(width / 2, topY, 38, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(width / 2, topY, 26, 0, Math.PI * 2); ctx.stroke();
 
     ctx.fillStyle = '#66666d';
     ctx.font = '15px Inter, Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('V I S U R A A   —   T H E   L E G A C Y   A R C H I V E', width / 2, 230);
+    ctx.fillText('V I S U R A A   —   T H E   L E G A C Y   A R C H I V E', width / 2, topY + 90);
 
     const from = capsule.senderName ? 'FROM ' + capsule.senderName.toUpperCase() : 'A MESSAGE FOR YOU';
     const occ = capsule.occasion ? '  —  ' + capsule.occasion.toUpperCase() : '';
     ctx.fillStyle = '#8a7e63';
     ctx.font = '13px Inter, Arial, sans-serif';
-    ctx.fillText(from + occ, width / 2, 280);
+    ctx.fillText(from + occ, width / 2, topY + 140);
 
     ctx.fillStyle = '#f2ede4';
     ctx.font = '32px Georgia, serif';
-    const endY = wrapCanvasText(ctx, capsule.message || '', width / 2, 400, width - 200, 48);
+    const endY = wrapCanvasText(ctx, capsule.message || '', width / 2, topY + 260, width - 200, 48);
 
     if (capsule.funNote) {
       ctx.fillStyle = '#b7b1a5';
@@ -1589,9 +1752,9 @@
     return canvas;
   }
 
-  document.getElementById('revealKeepsakeBtn').addEventListener('click', () => {
+  document.getElementById('revealKeepsakeBtn').addEventListener('click', async () => {
     if (!revealedCapsule) return;
-    const canvas = generateKeepsakeCanvas(revealedCapsule);
+    const canvas = await generateKeepsakeCanvas(revealedCapsule);
     canvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -1651,7 +1814,8 @@
           recipientEmail: revealedCapsule.senderEmail,
           deliveryDate: new Date(replyWhen).toISOString(),
           occasion: 'A reply',
-          message: replyMessage
+          message: replyMessage,
+          photo: selectedReplyPhotoData
         })
       });
 
@@ -1663,6 +1827,10 @@
       replyStatus.textContent = 'Reply sealed. It will reach them right on time.';
       replyStatus.classList.add('ok');
       document.getElementById('replyMessage').value = '';
+      selectedReplyPhotoData = '';
+      document.getElementById('replyPhotoInput').value = '';
+      document.getElementById('replyPhotoPreview').style.display = 'none';
+      document.getElementById('replyPhotoPickerBtn').style.display = 'inline-block';
     } catch (err) {
       replyStatus.textContent = err.message;
       replyStatus.classList.add('err');
