@@ -466,6 +466,37 @@
     opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.3s;
   }
 
+  .occasion-scene { margin-top: 8px; }
+  .cake-scene, .anniversary-scene {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    opacity: 0; animation: heroRise 0.7s var(--ease-lux) forwards;
+  }
+  .cake-svg { width: 130px; height: 130px; cursor: pointer; transition: transform 0.3s var(--ease-lux); }
+  .cake-svg:hover { transform: scale(1.04); }
+  #candleFlame {
+    transform-origin: 100px 34px;
+    animation: flameFlicker 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes flameFlicker {
+    from { transform: scale(1) rotate(-2deg); }
+    to   { transform: scale(1.08) rotate(2deg); }
+  }
+  .cake-hint { font-size: 13px; color: var(--ink-muted); letter-spacing: 0.02em; }
+
+  .anniversary-scene { height: 110px; justify-content: flex-end; }
+  .anniversary-hearts { position: relative; width: 100%; height: 90px; }
+  .anniv-heart {
+    position: absolute; bottom: 0; color: #c9827c; font-size: 20px; opacity: 0.85;
+    animation-name: annivFloat; animation-timing-function: ease-out; animation-fill-mode: forwards;
+  }
+  @keyframes annivFloat {
+    to { transform: translateY(-90px) scale(1.15); opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #candleFlame { animation: none; }
+  }
+
   .reveal-actions {
     margin-top: 36px; display: flex; gap: 14px; justify-content: center; flex-wrap: wrap;
     opacity: 0; animation: heroRise 0.8s var(--ease-lux) forwards; animation-delay: 0.5s;
@@ -760,6 +791,25 @@
       <span class="reveal-badge" id="revealBadge">Verified &amp; safe</span>
       <p class="reveal-message" id="revealMessage"></p>
       <p class="reveal-fun-note" id="revealFunNote"></p>
+
+      <div class="occasion-scene" id="occasionScene" style="display:none;">
+        <div class="cake-scene" id="cakeScene" style="display:none;">
+          <svg class="cake-svg" id="cakeSvg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+            <ellipse id="candleFlame" cx="100" cy="34" rx="7" ry="12" fill="#e8a33d"/>
+            <ellipse cx="100" cy="34" rx="3.5" ry="6" fill="#f7d99a"/>
+            <rect x="94" y="40" width="12" height="38" rx="2" fill="#f2ede4"/>
+            <rect x="94" y="40" width="12" height="6" fill="#8a7e63"/>
+            <path d="M40 90 Q100 70 160 90 L160 145 Q100 165 40 145 Z" fill="#3a2a20"/>
+            <path d="M40 90 Q100 70 160 90 Q100 110 40 90 Z" fill="#f2ede4" opacity="0.9"/>
+            <path d="M40 90 Q100 70 160 90 Q100 105 40 90 Z" fill="none" stroke="#8a7e63" stroke-width="1"/>
+            <ellipse cx="100" cy="152" rx="82" ry="11" fill="#1c1c20"/>
+          </svg>
+          <p class="cake-hint" id="cakeHint">Tap the candle to blow it out</p>
+        </div>
+        <div class="anniversary-scene" id="anniversaryScene" style="display:none;">
+          <div class="anniversary-hearts" id="anniversaryHearts"></div>
+        </div>
+      </div>
       <div class="reveal-actions">
         <button type="button" class="reveal-action-btn" id="revealKeepsakeBtn">Save as keepsake</button>
         <button type="button" class="reveal-action-btn" id="revealReplyBtn" style="display:none;">Reply with your own capsule</button>
@@ -1865,6 +1915,12 @@
     const revealHint = document.getElementById('revealHint');
     revealSeal.classList.add('breaking');
     revealHint.style.display = 'none';
+    document.getElementById('occasionScene').style.display = 'none';
+    document.getElementById('cakeScene').style.display = 'none';
+    document.getElementById('anniversaryScene').style.display = 'none';
+    document.getElementById('candleFlame').style.opacity = '1';
+    document.getElementById('candleFlame').style.transform = '';
+    document.getElementById('cakeHint').textContent = 'Tap the candle to blow it out';
 
     setTimeout(() => {
       const content = document.getElementById('revealContent');
@@ -1886,7 +1942,9 @@
       if (capsule.senderEmail) {
         document.getElementById('revealReplyBtn').style.display = 'inline-block';
       }
-      typeRevealMessage(messageEl, capsule.message || '');
+      typeRevealMessage(messageEl, capsule.message || '', () => {
+        showOccasionScene(capsule.occasion);
+      });
     }, 650);
   }
 
@@ -2100,7 +2158,97 @@
     }
   });
 
-  function typeRevealMessage(el, text) {
+  /* ---------- Occasion scenes: birthday cake & anniversary hearts ---------- */
+
+  function getOccasionCategoryClient(occasion) {
+    const o = (occasion || '').toLowerCase();
+    if (o.indexOf('birthday') !== -1) return 'birthday';
+    if (o.indexOf('anniversary') !== -1) return 'anniversary';
+    return 'general';
+  }
+
+  function playMelody(notes) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      let t = ctx.currentTime;
+      notes.forEach((note) => {
+        const freq = note[0];
+        const dur = note[1];
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.28, t + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur - 0.03);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur);
+        t += dur;
+      });
+    } catch (err) {
+      /* audio is a nice-to-have; ignore failures silently */
+    }
+  }
+
+  function playBirthdayTune() {
+    const N = { G4: 392.0, A4: 440.0, B4: 493.88, C5: 523.25 };
+    playMelody([[N.G4, 0.25], [N.G4, 0.2], [N.A4, 0.5], [N.G4, 0.5], [N.C5, 0.5], [N.B4, 0.9]]);
+  }
+
+  function playAnniversaryTune() {
+    const N = { C5: 523.25, E5: 659.25, G5: 783.99, C6: 1046.5 };
+    playMelody([[N.C5, 0.3], [N.E5, 0.3], [N.G5, 0.3], [N.C6, 0.7]]);
+  }
+
+  function wireCandleBlow() {
+    const cakeSvg = document.getElementById('cakeSvg');
+    const flame = document.getElementById('candleFlame');
+    const cakeHint = document.getElementById('cakeHint');
+    cakeSvg.addEventListener('click', function blowOnce() {
+      cakeSvg.removeEventListener('click', blowOnce);
+      playBirthdayTune();
+      fireConfetti();
+      flame.style.transition = 'opacity 0.35s, transform 0.35s';
+      flame.style.opacity = '0';
+      flame.style.transform = 'scale(0.15)';
+      cakeHint.textContent = 'Happy birthday! 🎉';
+    }, { once: true });
+  }
+
+  function spawnAnniversaryHearts() {
+    const container = document.getElementById('anniversaryHearts');
+    container.innerHTML = '';
+    for (let i = 0; i < 14; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'anniv-heart';
+      heart.textContent = '♥';
+      heart.style.left = Math.random() * 100 + '%';
+      heart.style.animationDelay = (Math.random() * 1.4).toFixed(2) + 's';
+      heart.style.animationDuration = (3 + Math.random() * 2).toFixed(2) + 's';
+      container.appendChild(heart);
+    }
+  }
+
+  function showOccasionScene(occasion) {
+    const category = getOccasionCategoryClient(occasion);
+    if (category === 'general') return;
+
+    document.getElementById('occasionScene').style.display = 'block';
+
+    if (category === 'birthday') {
+      document.getElementById('cakeScene').style.display = 'flex';
+      wireCandleBlow();
+    } else if (category === 'anniversary') {
+      document.getElementById('anniversaryScene').style.display = 'flex';
+      spawnAnniversaryHearts();
+      playAnniversaryTune();
+    }
+  }
+
+  function typeRevealMessage(el, text, onComplete) {
     el.textContent = '';
     let i = 0;
     const speed = 22;
@@ -2109,6 +2257,8 @@
         el.textContent = text.slice(0, i);
         i++;
         setTimeout(tick, speed);
+      } else if (onComplete) {
+        onComplete();
       }
     }
     tick();
