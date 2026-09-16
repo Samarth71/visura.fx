@@ -477,9 +477,23 @@
   }
   .reveal-action-btn:hover { border-color: var(--spine-lit); color: var(--ivory); }
 
+  .reply-overlay {
+    position: fixed; inset: 0; background: var(--obsidian); z-index: 250;
+    display: flex; align-items: flex-start; justify-content: center;
+    overflow-y: auto; padding: 60px 24px;
+    opacity: 0; visibility: hidden; transition: opacity 0.35s var(--ease-lux), visibility 0.35s;
+  }
+  .reply-overlay.open { opacity: 1; visibility: visible; }
+  .reply-overlay-close {
+    position: fixed; top: 24px; right: 28px; background: transparent; border: 1px solid var(--hairline-strong);
+    color: var(--ivory-dim); width: 36px; height: 36px; font-size: 20px; line-height: 1; cursor: pointer;
+    transition: border-color 0.3s var(--ease-lux), color 0.3s var(--ease-lux);
+  }
+  .reply-overlay-close:hover { border-color: var(--spine-lit); color: var(--ivory); }
+
   .reply-form {
     margin-top: 32px; text-align: left; background: var(--panel); border: 1px solid var(--hairline-strong);
-    padding: 30px; max-width: 440px; margin-left: auto; margin-right: auto;
+    padding: 30px; max-width: 440px; width: 100%; margin-left: auto; margin-right: auto;
   }
   .reply-form-title { font-family: 'Cormorant Garamond', serif; font-size: 21px; color: var(--ivory); margin: 0 0 6px; }
   .reply-form-sub { font-size: 12px; color: var(--ink-muted); margin: 0 0 22px; }
@@ -750,37 +764,71 @@
         <button type="button" class="reveal-action-btn" id="revealKeepsakeBtn">Save as keepsake</button>
         <button type="button" class="reveal-action-btn" id="revealReplyBtn" style="display:none;">Reply with your own capsule</button>
       </div>
-      <div class="reply-form" id="replyForm" style="display:none;">
-        <p class="reply-form-title">Send a reply</p>
-        <p class="reply-form-sub">Sealed the same way — private until it arrives.</p>
-        <div class="capsule-field">
-          <label for="replyName">Your name</label>
-          <input type="text" id="replyName" placeholder="Who this reply is from">
-        </div>
-        <div class="capsule-field">
-          <label for="replyWhen">When should it arrive</label>
-          <input type="datetime-local" id="replyWhen" class="reply-datetime">
-        </div>
-        <div class="capsule-field">
-          <label for="replyMessage">Your reply</label>
-          <textarea id="replyMessage" rows="4" placeholder="Write your reply..."></textarea>
-        </div>
-        <div class="capsule-field" style="margin-bottom: 0;">
-          <label>Photo <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
-          <div class="photo-picker" id="replyPhotoPicker">
-            <input type="file" id="replyPhotoInput" accept="image/*" style="display:none;">
-            <button type="button" class="photo-picker-btn" id="replyPhotoPickerBtn">Attach a photo</button>
-            <div class="photo-preview" id="replyPhotoPreview" style="display:none;">
-              <img id="replyPhotoPreviewImg" alt="Attached photo preview">
-              <button type="button" class="photo-remove-btn" id="replyPhotoRemoveBtn">Remove</button>
-            </div>
-          </div>
-        </div>
-        <p class="reply-status" id="replyStatus"></p>
-        <button type="button" class="capsule-cta" id="replySubmitBtn">Seal reply</button>
-      </div>
     </div>
     <a class="reveal-back-link" id="revealBackLink" href="/">Back to visuraa</a>
+  </div>
+</div>
+
+<div class="reply-overlay" id="replyOverlay">
+  <button type="button" class="reply-overlay-close" id="replyOverlayClose" aria-label="Close">&times;</button>
+  <div class="reply-form" id="replyForm">
+    <p class="reply-form-title">Send a reply</p>
+    <p class="reply-form-sub">Sealed the same way — private until it arrives.</p>
+    <div class="capsule-field">
+      <label for="replyName">Your name</label>
+      <input type="text" id="replyName" placeholder="Who this reply is from">
+    </div>
+    <div class="capsule-field">
+      <label for="replyDateTrigger">Delivery date</label>
+      <button type="button" class="picker-trigger" id="replyDateTrigger">Choose a date<span class="picker-caret">&#9662;</span></button>
+      <div class="datepicker-popover" id="replyDatePopover">
+        <div class="cal-header">
+          <span class="cal-label" id="replyCalLabel">Month Year</span>
+          <div class="cal-nav">
+            <button type="button" class="cal-nav-btn" id="replyCalPrevBtn">&#8249;</button>
+            <button type="button" class="cal-nav-btn" id="replyCalNextBtn">&#8250;</button>
+          </div>
+        </div>
+        <div class="cal-weekdays">
+          <span class="cal-weekday">Su</span><span class="cal-weekday">Mo</span><span class="cal-weekday">Tu</span>
+          <span class="cal-weekday">We</span><span class="cal-weekday">Th</span><span class="cal-weekday">Fr</span><span class="cal-weekday">Sa</span>
+        </div>
+        <div class="cal-grid" id="replyCalGrid"></div>
+        <div class="cal-footer">
+          <button type="button" id="replyCalClearBtn">Clear</button>
+          <button type="button" id="replyCalTodayBtn">Today</button>
+        </div>
+      </div>
+    </div>
+    <div class="capsule-field">
+      <label for="replyTimeTrigger">Delivery time</label>
+      <button type="button" class="picker-trigger" id="replyTimeTrigger">Choose a time<span class="picker-caret">&#9662;</span></button>
+      <div class="timepicker-popover" id="replyTimePopover">
+        <div class="time-list" id="replyTimeList"></div>
+        <div class="time-custom-row">
+          <input type="time" id="replyCustomTimeInput" class="time-custom-input">
+          <button type="button" class="time-custom-btn" id="replyCustomTimeSubmit">Set</button>
+        </div>
+        <p class="time-custom-error" id="replyCustomTimeError"></p>
+      </div>
+    </div>
+    <div class="capsule-field">
+      <label for="replyMessage">Your reply</label>
+      <textarea id="replyMessage" rows="4" placeholder="Write your reply..."></textarea>
+    </div>
+    <div class="capsule-field" style="margin-bottom: 0;">
+      <label>Photo <span style="color: var(--ink-muted); font-weight: 300;">(optional)</span></label>
+      <div class="photo-picker" id="replyPhotoPicker">
+        <input type="file" id="replyPhotoInput" accept="image/*" style="display:none;">
+        <button type="button" class="photo-picker-btn" id="replyPhotoPickerBtn">Attach a photo</button>
+        <div class="photo-preview" id="replyPhotoPreview" style="display:none;">
+          <img id="replyPhotoPreviewImg" alt="Attached photo preview">
+          <button type="button" class="photo-remove-btn" id="replyPhotoRemoveBtn">Remove</button>
+        </div>
+      </div>
+    </div>
+    <p class="reply-status" id="replyStatus"></p>
+    <button type="button" class="capsule-cta" id="replySubmitBtn">Seal reply</button>
   </div>
 </div>
 
@@ -802,6 +850,18 @@
   const calTodayBtn = document.getElementById('calTodayBtn');
   const calClearBtn = document.getElementById('calClearBtn');
   const timeList = document.getElementById('timeList');
+
+  const replyDateTrigger = document.getElementById('replyDateTrigger');
+  const replyTimeTrigger = document.getElementById('replyTimeTrigger');
+  const replyDatePopover = document.getElementById('replyDatePopover');
+  const replyTimePopover = document.getElementById('replyTimePopover');
+  const replyCalGrid = document.getElementById('replyCalGrid');
+  const replyCalLabel = document.getElementById('replyCalLabel');
+  const replyCalPrevBtn = document.getElementById('replyCalPrevBtn');
+  const replyCalNextBtn = document.getElementById('replyCalNextBtn');
+  const replyCalTodayBtn = document.getElementById('replyCalTodayBtn');
+  const replyCalClearBtn = document.getElementById('replyCalClearBtn');
+  const replyTimeList = document.getElementById('replyTimeList');
 
   const sealOverlay = document.getElementById('sealOverlay');
   const sealTypewriter = document.getElementById('sealTypewriter');
@@ -940,6 +1000,11 @@
   let calendarYear = now.getFullYear();
   let selectedDateStr = '';
   let selectedTimeStr = '';
+
+  let replyCalendarMonth = now.getMonth();
+  let replyCalendarYear = now.getFullYear();
+  let replySelectedDateStr = '';
+  let replySelectedTimeStr = '';
 
   const messageTemplates = {
     birthday: "Happy birthday. I hope the year ahead treats you exactly as well as you deserve — and even then, I'll still think you deserve more.",
@@ -1174,9 +1239,187 @@
     closeTimePopover();
   });
 
+  /* ---------- Reply form: calendar popover ---------- */
+
+  function renderReplyCalendar() {
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const first = new Date(replyCalendarYear, replyCalendarMonth, 1);
+    const startDay = first.getDay();
+    const daysInMonth = new Date(replyCalendarYear, replyCalendarMonth + 1, 0).getDate();
+    const daysInPrevMonth = new Date(replyCalendarYear, replyCalendarMonth, 0).getDate();
+    const todayStr = todayISO();
+
+    let cells = '';
+    for (let i = 0; i < startDay; i++) {
+      const d = daysInPrevMonth - startDay + 1 + i;
+      cells += '<button type="button" class="cal-day cal-outside" disabled>' + d + '</button>';
+    }
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = replyCalendarYear + '-' + pad(replyCalendarMonth + 1) + '-' + pad(d);
+      const isPast = dateStr < todayStr;
+      const isToday = dateStr === todayStr;
+      const isSelected = dateStr === replySelectedDateStr;
+      let cls = 'cal-day';
+      if (isSelected) cls += ' cal-selected';
+      if (isToday) cls += ' cal-today';
+      cells += '<button type="button" class="' + cls + '" data-date="' + dateStr + '"' + (isPast ? ' disabled' : '') + '>' + d + '</button>';
+    }
+    const totalCells = startDay + daysInMonth;
+    const trailing = (7 - (totalCells % 7)) % 7;
+    for (let i = 1; i <= trailing; i++) {
+      cells += '<button type="button" class="cal-day cal-outside" disabled>' + i + '</button>';
+    }
+
+    replyCalGrid.innerHTML = cells;
+    replyCalLabel.textContent = monthNames[replyCalendarMonth] + ' ' + replyCalendarYear;
+  }
+
+  function openReplyDatePopover() {
+    closeReplyTimePopover();
+    renderReplyCalendar();
+    replyDatePopover.classList.add('open');
+  }
+  function closeReplyDatePopover() { replyDatePopover.classList.remove('open'); }
+
+  replyDateTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (replyDatePopover.classList.contains('open')) closeReplyDatePopover();
+    else openReplyDatePopover();
+  });
+
+  function clampReplySelectedTimeIfPast() {
+    if (!replySelectedTimeStr || replySelectedDateStr !== todayISO()) return;
+    const [h, m] = replySelectedTimeStr.split(':').map(Number);
+    const now = new Date();
+    if (h * 60 + m <= now.getHours() * 60 + now.getMinutes()) {
+      replySelectedTimeStr = '';
+      replyTimeTrigger.childNodes[0].textContent = 'Choose a time';
+      replyTimeTrigger.classList.remove('picker-filled');
+    }
+  }
+
+  replyCalGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.cal-day');
+    if (!btn || btn.disabled) return;
+    replySelectedDateStr = btn.dataset.date;
+    replyDateTrigger.childNodes[0].textContent = formatDateDisplay(replySelectedDateStr);
+    replyDateTrigger.classList.add('picker-filled');
+    clampReplySelectedTimeIfPast();
+    renderReplyCalendar();
+    closeReplyDatePopover();
+  });
+
+  replyCalPrevBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    replyCalendarMonth--;
+    if (replyCalendarMonth < 0) { replyCalendarMonth = 11; replyCalendarYear--; }
+    renderReplyCalendar();
+  });
+  replyCalNextBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    replyCalendarMonth++;
+    if (replyCalendarMonth > 11) { replyCalendarMonth = 0; replyCalendarYear++; }
+    renderReplyCalendar();
+  });
+  replyCalTodayBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const t = new Date();
+    replyCalendarMonth = t.getMonth();
+    replyCalendarYear = t.getFullYear();
+    replySelectedDateStr = todayISO();
+    replyDateTrigger.childNodes[0].textContent = formatDateDisplay(replySelectedDateStr);
+    replyDateTrigger.classList.add('picker-filled');
+    clampReplySelectedTimeIfPast();
+    renderReplyCalendar();
+  });
+  replyCalClearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    replySelectedDateStr = '';
+    replyDateTrigger.childNodes[0].textContent = 'Choose a date';
+    replyDateTrigger.classList.remove('picker-filled');
+    renderReplyCalendar();
+  });
+
+  /* ---------- Reply form: time popover ---------- */
+
+  function renderReplyTimeOptions() {
+    const isToday = replySelectedDateStr === todayISO();
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    let html = '';
+    for (let h = 0; h < 24; h++) {
+      for (let m = 0; m < 60; m += 30) {
+        const val = pad(h) + ':' + pad(m);
+        const label = formatTimeDisplay(val);
+        const isSelected = val === replySelectedTimeStr;
+        const slotMinutes = h * 60 + m;
+        const isPast = isToday && slotMinutes <= currentMinutes;
+        let cls = 'time-option';
+        if (isSelected) cls += ' time-selected';
+        if (isPast) cls += ' time-disabled';
+        html += '<button type="button" class="' + cls + '" data-time="' + val + '"' + (isPast ? ' disabled' : '') + '>' + label + '</button>';
+      }
+    }
+    replyTimeList.innerHTML = html;
+  }
+
+  function openReplyTimePopover() {
+    closeReplyDatePopover();
+    renderReplyTimeOptions();
+    replyTimePopover.classList.add('open');
+    const selected = replyTimeList.querySelector('.time-selected');
+    if (selected) selected.scrollIntoView({ block: 'center' });
+  }
+  function closeReplyTimePopover() { replyTimePopover.classList.remove('open'); }
+
+  replyTimeTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (replyTimePopover.classList.contains('open')) closeReplyTimePopover();
+    else openReplyTimePopover();
+  });
+
+  replyTimeList.addEventListener('click', (e) => {
+    const btn = e.target.closest('.time-option');
+    if (!btn || btn.disabled) return;
+    replySelectedTimeStr = btn.dataset.time;
+    replyTimeTrigger.childNodes[0].textContent = formatTimeDisplay(replySelectedTimeStr);
+    replyTimeTrigger.classList.add('picker-filled');
+    renderReplyTimeOptions();
+    closeReplyTimePopover();
+  });
+
+  document.getElementById('replyCustomTimeSubmit').addEventListener('click', () => {
+    const customTimeInput = document.getElementById('replyCustomTimeInput');
+    const customTimeError = document.getElementById('replyCustomTimeError');
+    const val = customTimeInput.value;
+
+    if (!val) {
+      customTimeError.textContent = 'Pick a time first.';
+      return;
+    }
+
+    if (replySelectedDateStr === todayISO()) {
+      const [h, m] = val.split(':').map(Number);
+      const now = new Date();
+      if (h * 60 + m <= now.getHours() * 60 + now.getMinutes()) {
+        customTimeError.textContent = 'Pick a time later than right now.';
+        return;
+      }
+    }
+
+    customTimeError.textContent = '';
+    replySelectedTimeStr = val;
+    replyTimeTrigger.childNodes[0].textContent = formatTimeDisplay(replySelectedTimeStr);
+    replyTimeTrigger.classList.add('picker-filled');
+    closeReplyTimePopover();
+  });
+
   document.addEventListener('click', (e) => {
     if (!datePopover.contains(e.target) && e.target !== dateTrigger) closeDatePopover();
     if (!timePopover.contains(e.target) && e.target !== timeTrigger) closeTimePopover();
+    if (!replyDatePopover.contains(e.target) && e.target !== replyDateTrigger) closeReplyDatePopover();
+    if (!replyTimePopover.contains(e.target) && e.target !== replyTimeTrigger) closeReplyTimePopover();
   });
 
   /* ---------- Message templates ---------- */
@@ -1770,12 +2013,17 @@
   /* ---------- Reply with your own capsule ---------- */
 
   document.getElementById('revealReplyBtn').addEventListener('click', () => {
-    const replyForm = document.getElementById('replyForm');
-    const isOpen = replyForm.style.display === 'block';
-    replyForm.style.display = isOpen ? 'none' : 'block';
-    if (!isOpen && revealedCapsule) {
+    const replyOverlay = document.getElementById('replyOverlay');
+    replyOverlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if (revealedCapsule) {
       document.getElementById('replyName').value = revealedCapsule.recipientName || '';
     }
+  });
+
+  document.getElementById('replyOverlayClose').addEventListener('click', () => {
+    document.getElementById('replyOverlay').classList.remove('open');
+    document.body.style.overflow = '';
   });
 
   document.getElementById('replySubmitBtn').addEventListener('click', async () => {
@@ -1786,10 +2034,12 @@
     if (!revealedCapsule || !revealedCapsule.senderEmail) return;
 
     const replyName = document.getElementById('replyName').value.trim();
-    const replyWhen = document.getElementById('replyWhen').value;
     const replyMessage = document.getElementById('replyMessage').value.trim();
+    const replyDeliveryDateTime = (replySelectedDateStr && replySelectedTimeStr)
+      ? new Date(replySelectedDateStr + 'T' + replySelectedTimeStr + ':00').toISOString()
+      : '';
 
-    if (!replyWhen || new Date(replyWhen) < new Date()) {
+    if (!replyDeliveryDateTime || new Date(replyDeliveryDateTime) < new Date()) {
       replyStatus.textContent = 'Pick a date and time in the future.';
       replyStatus.classList.add('err');
       return;
@@ -1812,7 +2062,7 @@
           senderName: replyName,
           recipientName: revealedCapsule.senderName,
           recipientEmail: revealedCapsule.senderEmail,
-          deliveryDate: new Date(replyWhen).toISOString(),
+          deliveryDate: replyDeliveryDateTime,
           occasion: 'A reply',
           message: replyMessage,
           photo: selectedReplyPhotoData
@@ -1831,6 +2081,16 @@
       document.getElementById('replyPhotoInput').value = '';
       document.getElementById('replyPhotoPreview').style.display = 'none';
       document.getElementById('replyPhotoPickerBtn').style.display = 'inline-block';
+      replySelectedDateStr = '';
+      replySelectedTimeStr = '';
+      replyDateTrigger.childNodes[0].textContent = 'Choose a date';
+      replyDateTrigger.classList.remove('picker-filled');
+      replyTimeTrigger.childNodes[0].textContent = 'Choose a time';
+      replyTimeTrigger.classList.remove('picker-filled');
+      setTimeout(() => {
+        document.getElementById('replyOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+      }, 2200);
     } catch (err) {
       replyStatus.textContent = err.message;
       replyStatus.classList.add('err');
