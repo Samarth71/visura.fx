@@ -36,6 +36,7 @@ module.exports = async function handler(req, res) {
       senderEmail: capsule.senderEmail || '',
       occasion: capsule.occasion,
       message: capsule.message,
+      photo: capsule.photo || '',
       funNote: pickFunNote(capsule.occasion)
     });
   }
